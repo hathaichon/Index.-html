@@ -3,29 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Herbarium Dryer</title>
+    <title>Purple Bean Adventure - ENTECH 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        .hero { background: linear-gradient(135deg, #2E7D32 0%, #66BB6A 100%); color: white; text-align: center; padding: 100px 20px; }
-        .hero h1 { font-size: 3em; margin: 0; }
-        .hero p { font-size: 1.3em; margin: 10px 0; }
-        .container { max-width: 1200px; margin: 50px auto; padding: 20px; text-align: center; }
-        .container h2 { color: #2E7D32; font-size: 2em; margin-bottom: 20px; }
-        .container p { font-size: 1.2em; line-height: 1.8; }
+        :root {
+            --p-dark: #4a148c; /* ม่วงเข้ม */
+            --p-main: #7b1fa2; /* ม่วงหลัก */
+            --p-light: #e1bee7;
+            --g-main: #2e7d32; /* เขียว BCG */
+            --bg: #f3f4f6;
+        }
+
+        body { margin: 0; font-family: 'Prompt', sans-serif; background: var(--bg); color: #333; padding-bottom: 90px; overflow-x: hidden; }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, var(--p-dark), var(--p-main));
+            color: white; padding: 20px 20px 40px;
+            border-radius: 0 0 30px 30px; text-align: center;
+            box-shadow: 0 10px 20px rgba(74, 20, 140, 0.3);
+            position: relative;
+        }
+        .header h1 { margin: 0; font-size: 1.5em; }
+        .badge { background: #ffeb3b; color: #333; padding: 2px 10px; border-radius: 10px; font-size: 0.7em; font-weight: bold; position: absolute; top: 15px; right: 15px; }
+
+        /* NAVIGATION BAR (Bottom) */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: white; display: flex; justify-content: space-around;
+            padding: 10px 0 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            z-index: 1000; border-radius: 20px 20px 0 0;
+        }
+        .nav-item {
+            border: none; background: none; color: #999;
+            font-family: 'Prompt'; font-size: 0.8em;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            cursor: pointer; transition: 0.3s;
+        }
+        .nav-item i { font-size: 1.4em; }
+        .nav-item.active { color: var(--p-main); transform: translateY(-5px); font-weight: bold; }
+
+        /* CONTENT SECTIONS */
+        .section { display: none; padding: 20px; animation: fadeIn 0.4s; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* CARDS */
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card-title { color: var(--p-main); font-weight: bold; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        
+        /* INTERACTIVE 1: BEFORE/AFTER */
+        .compare-box { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+        .bean-state { text-align: center; cursor: pointer; transition: 0.3s; }
+        .bean-state:active { transform: scale(0.95); }
+        .bean-circle { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 0 auto 5px; border: 4px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        
+        /* INTERACTIVE 2: GAME */
+        .game-area { text-align: center; background: #263238; color: white; padding: 20px; border-radius: 20px; }
+        .temp-display { font-size: 3em; font-weight: bold; margin: 10px 0; color: #64ffda; }
+        .slider-container { margin: 20px 0; }
+        .slider { -webkit-appearance: none; width: 100%; height: 10px; background: #555; border-radius: 5px; outline: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 25px; height: 25px; background: #ffeb3b; border-radius: 50%; cursor: pointer; }
+        .btn-check { background: var(--p-main); color: white; border: none; padding: 10px 30px; border-radius: 20px; font-size: 1.1em; cursor: pointer; box-shadow: 0 5px 0 #4a148c; transition: 0.1s; }
+        .btn-check:active { transform: translateY(5px); box-shadow: none; }
+        .game-result { margin-top: 15px; font-weight: bold; min-height: 30px; }
+
     </style>
 </head>
 <body>
-    <div class="hero">
-        <h1>🌿 SMART HERBARIUM DRYER</h1>
-        <p>ตู้อบแห้งพืชสมุนไพรอัจฉริยะแบบควบคุมสภาวะ</p>
-        <p>โรงเรียนนารีนุกูล จังหวัดอุบลราชธานี | ENTECH DAY 2026</p>
+
+    <header class="header">
+        <div class="badge">ENTECH 2026</div>
+        <h1>Smart Herbarium</h1>
+        <p style="opacity: 0.8; font-size: 0.9em;">Purple Bean Project | Narinukun School</p>
+    </header>
+
+    <div id="story" class="section active">
+        <div class="card">
+            <div class="card-title"><i class="fas fa-book"></i> บทที่ 1: ปัญหาของถั่วแปบ</div>
+            <p>ถั่วแปบสีม่วงในสวนพฤกษศาสตร์ของเรา มีสาร <strong>Anthocyanin</strong> สูงมาก แต่มีปัญหาใหญ่คือ...</p>
+            <div style="background: #fff3e0; padding: 10px; border-radius: 10px; text-align: center; font-size: 0.9em; color: #e65100;">
+                "ลองกดที่รูปถั่ว เพื่อดูผลลัพธ์การตากแดด" 👇
+            </div>
+            
+            <div class="compare-box">
+                <div class="bean-state" onclick="alert('สดใหม่: สารอาหารครบ สีสวย!')">
+                    <div class="bean-circle" style="background: var(--p-main); color: white;">🌿</div>
+                    <small>ถั่วสด</small>
+                </div>
+                <div style="font-size: 1.5em; padding-top: 25px;">➔</div>
+                <div class="bean-state" onclick="toggleBadBean(this)">
+                    <div class="bean-circle" style="background: #5d4037; color: #ccc;" id="badBean">☀️</div>
+                    <small>ตากแดด</small>
+                </div>
+            </div>
+            <p id="badText" style="text-align: center; font-size: 0.8em; color: #d32f2f; display: none;">
+                ❌ สีซีดจาง เชื้อราขึ้น สารอาหารหายหมด!
+            </p>
+        </div>
     </div>
-    <div class="container">
-        <h2>📊 ไฮไลท์โครงงาน</h2>
-        <p><strong>✅ ลดการสูญเสียผลผลิต</strong> จาก 70% → 0%</p>
-        <p><strong>🌡️ ควบคุมอุณหภูมิแม่นยำ</strong> ± 0.5°C</p>
-        <p><strong>💰 ต้นทุนต่ำ</strong> เพียง 1,600 บาท</p>
-        <p><strong>🌍 สอดคล้อง BCG Economy</strong></p>
+
+    <div id="system" class="section">
+        <div class="card">
+            <div class="card-title"><i class="fas fa-microchip"></i> บทที่ 3: ระบบอัจฉริยะ</div>
+            <p>เราแก้ปัญหาด้วยระบบ <strong>PID Control</strong> ที่รักษาอุณหภูมิได้นิ่งสนิท</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-temperature-high fa-2x" style="color: #1976d2;"></i>
+                    <div>
+                        <strong>1. Sensor DHT22</strong>
+                        <div style="font-size: 0.8em;">อ่านค่าทุก 0.5 วินาที</div>
+                    </div>
+                </div>
+                <div style="text-align: center; color: #aaa;">⬇</div>
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-brain fa-2x" style="color: #2e7d32;"></i>
+                    <div>
+                        <strong>2. Processing</strong>
+                        <div style="font-size: 0.8em;">ประมวลผล เปรียบเทียบค่า</div>
+                    </div>
+                </div>
+                <div style="text-align: center; color: #aaa;">⬇</div>
+                <div style="background: #ffebee; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-fire fa-2x" style="color: #c62828;"></i>
+                    <div>
+                        <strong>3. Heater Control</strong>
+                        <div style="font-size: 0.8em;">สั่งงาน Heater เพื่อเลี้ยงอุณหภูมิ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <div id="game" class="section">
+        <div class="game-area">
+            <h2 style="margin: 0; color: #ffeb3b;"><i class="fas fa-gamepad"></i> Drying Master</h2>
+            <p style="font-size: 0.9em; opacity: 0.8;">ภารกิจ: หาอุณหภูมิที่ "ดีที่สุด" ให้ถั่วแปบ</p>
+            
+            <div class="temp-display"><span id="tempVal">40</span>°C</div>
+            
+            <div class="slider-container">
+                <input type="range" min="30" max="80" value="40" class="slider" id="tempSlider" oninput="updateTemp(this.value)">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8em; margin-top: 5px; color: #ccc;">
+                    <span>30°C</span>
+                    <span>80°C</span>
+                </div>
+            </div>
+
+            <button class="btn-check" onclick="checkResult()">เริ่มอบเลย! 🚀</button>
+            
+            <div id="gameResult" class="game-result"></div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-title">💡 เฉลย (ความรู้)</div>
+            <ul style="font-size: 0.9em; padding-left: 20px; line-height: 1.6;">
+                <li><strong>ต่ำกว่า 45°C:</strong> ช้าเกินไป เกิดเชื้อรา</li>
+                <li><strong>สูงกว่า 55°C:</strong> ร้อนไป สารสีม่วงสลายตัว</li>
+                <li><strong>50°C (±0.5):</strong> คือจุดที่ดีที่สุด! (Golden Point)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="impact" class="section">
+        <div class="card">
+            <div class="card-title"><i class="fas fa-chart-line"></i> บทที่ 5: ผลลัพธ์ BCG</div>
+            
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>ความคงทนของสี (Quality)</span>
+                    <span style="color: var(--p-main); font-weight: bold;">88%</span>
+                </div>
+                <div style="background: #eee; height: 10px; border-radius: 5px;">
+                    <div style="width: 88%; background: var(--p-main); height: 100%; border-radius: 5px;"></div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>ลดการเกิดเชื้อรา (Safety)</span>
+                    <span style="color: var(--g-main); font-weight: bold;">100%</span>
+                </div>
+                <div style="background: #eee; height: 10px; border-radius: 5px;">
+                    <div style="width: 100%; background: var(--g-main); height: 100%; border-radius: 5px;"></div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <h3>💰 สร้างมูลค่าเพิ่ม</h3>
+                <p>จากวัชพืชไร้ค่า ➜ ชาชงดื่มเพื่อสุขภาพ</p>
+                <button style="background: var(--p-main); color: white; border: none; padding: 10px 20px; border-radius: 20px;" onclick="alert('ติดต่อ: โรงเรียนนารีนุกูล โทร 0xx-xxxxxxx')">
+                    สนใจผลิตภัณฑ์
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <button class="nav-item active" onclick="switchTab('story', this)">
+            <i class="fas fa-book-open"></i> Story
+        </button>
+        <button class="nav-item" onclick="switchTab('system', this)">
+            <i class="fas fa-cogs"></i> System
+        </button>
+        <button class="nav-item" onclick="switchTab('game', this)">
+            <i class="fas fa-gamepad"></i> Game
+        </button>
+        <button class="nav-item" onclick="switchTab('impact', this)">
+            <i class="fas fa-globe-asia"></i> Impact
+        </button>
+    </div>
+
+    <script>
+        // Tab Switcher
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // Story Interaction
+        function toggleBadBean(el) {
+            let badText = document.getElementById('badText');
+            if (badText.style.display === 'none') {
+                badText.style.display = 'block';
+                el.style.transform = 'scale(1.1)';
+                alert('แย่แล้ว! ตากแดดทำให้น้ำระเหยช้า เชื้อราขึ้น และสีซีดลง');
+            } else {
+                badText.style.display = 'none';
+                el.style.transform = 'scale(1)';
+            }
+        }
+
+        // Game Logic
+        function updateTemp(val) {
+            document.getElementById('tempVal').innerText = val;
+        }
+
+        function checkResult() {
+            let temp = parseInt(document.getElementById('tempVal').innerText);
+            let resultBox = document.getElementById('gameResult');
+            
+            if (temp >= 49 && temp <= 51) {
+                resultBox.innerHTML = "<span style='color:#64ffda'>🎉 ยอดเยี่ยม! 50°C คือจุดที่ดีที่สุด สีสวย ไร้เชื้อรา</span>";
+            } else if (temp < 49) {
+                resultBox.innerHTML = "<span style='color:#ff8a80'>❄️ เย็นไป! ความชื้นเหลือ เชื้อราถามหา</span>";
+            } else {
+                resultBox.innerHTML = "<span style='color:#ff8a80'>🔥 ร้อนไป! ถั่วไหม้ สารสีม่วงหายหมด</span>";
+            }
+        }
+    </script>
 </body>
 </html>
+
