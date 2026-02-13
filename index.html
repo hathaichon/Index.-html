@@ -18,19 +18,22 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const { useMemo, useState } = React;
+    const { useEffect, useMemo, useState } = React;
 
+    // Online DB endpoint (Google Apps Script Web App)
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby5As2FBzvbmAAIV8xIC4Kxd6_pqTvKCCbd_-p5SY9Di9_e8uBULh_xRjEi6TJ0Ta4AsQ/exec";
     const ADMIN_PASSWORD = "2026";
 
-    const TEAMS = [
-      { id: 'blue', name: 'สีน้ำเงิน (พระญาณ)', color: 'bg-blue-600', text: 'text-blue-600', score: 1250 },
-      { id: 'purple', name: 'สีม่วง (ราชกิจ)', color: 'bg-purple-600', text: 'text-purple-600', score: 1180 },
-      { id: 'green', name: 'สีเขียว (หลวงวิเศษ)', color: 'bg-green-600', text: 'text-green-600', score: 1320 },
-      { id: 'yellow', name: 'สีเหลือง (ดรุณ)', color: 'bg-yellow-500', text: 'text-yellow-500', score: 1150 },
-      { id: 'cyan', name: 'สีฟ้า (วชิร)', color: 'bg-cyan-500', text: 'text-cyan-500', score: 1290 },
-      { id: 'red', name: 'สีแดง (รักขิต)', color: 'bg-red-600', text: 'text-red-600', score: 1400 }
-    ];
+    // Active team only (ตามคำขอ: Active สีน้ำเงินสีเดียว)
+    const ACTIVE_TEAM = {
+      id: 'blue',
+      name: 'สีน้ำเงิน (พระญาณ)',
+      color: 'bg-blue-600',
+      text: 'text-blue-600',
+      score: 1250,
+    };
+
+    const TEAMS = [ACTIVE_TEAM];
 
     const ROLES = [
       'นักกีฬา (Athlete)',
@@ -52,17 +55,34 @@
       { id: 10, category: 'Growth', title: 'วิสัยทัศน์', desc: 'เห็นสิ่งที่ต้องปรับปรุงในการจัดครั้งต่อไป?' }
     ];
 
-    const SOCIAL_FEED = [
-      { user: 'Admin', text: 'ยินดีต้อนรับสู่ Narinukun Games 2026! มาร่วมส่งกำลังใจกันครับ', time: 'Now', color: 'bg-slate-200 text-slate-800' },
-      { user: 'NongPraew', text: 'สีแดงสู้ๆ! พาเหรดปีนี้ปังมากกก 🔥', time: '2m ago', color: 'bg-red-100 text-red-800' },
-      { user: 'CoachBoy', text: 'บาสเกตบอลปีนี้มันส์สุดๆ สนุกมากครับ 🏀', time: '5m ago', color: 'bg-orange-100 text-orange-800' },
-      { user: 'Staff_Aey', text: 'ขอบคุณทุกคนที่ช่วยกันรักษาความสะอาดนะ ❤️', time: '10m ago', color: 'bg-blue-100 text-blue-800' },
+    const DEFAULT_FEED = [
+      { user: 'Admin', text: 'ระบบออนไลน์พร้อมใช้งานแล้วสำหรับทีมสีน้ำเงิน', time: 'Now', color: 'bg-blue-100 text-blue-800' },
+      { user: 'BlueCaptain', text: 'สีน้ำเงินพร้อมลุย! 💙', time: '3m ago', color: 'bg-sky-100 text-sky-800' },
     ];
+
+    async function fetchSummaryFromDB() {
+      const url = `${GOOGLE_SCRIPT_URL}?action=summary&team=${encodeURIComponent(ACTIVE_TEAM.id)}`;
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) throw new Error(`summary failed: ${response.status}`);
+      return response.json();
+    }
+
+    async function saveEvaluationToDB(payload) {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submit', ...payload }),
+      });
+      if (!response.ok) {
+        throw new Error(`submit failed: ${response.status}`);
+      }
+      return response.json().catch(() => ({ ok: true }));
+    }
 
     function App() {
       const [name, setName] = useState('');
       const [role, setRole] = useState('');
-      const [team, setTeam] = useState('');
+      const [team, setTeam] = useState(ACTIVE_TEAM.name);
       const [ratings, setRatings] = useState(Object.fromEntries(QUESTIONS.map(q => [q.id, 3])));
       const [comment, setComment] = useState('');
       const [submitted, setSubmitted] = useState(false);
@@ -70,25 +90,64 @@
       const [showDashboard, setShowDashboard] = useState(false);
       const [passInput, setPassInput] = useState('');
       const [authorized, setAuthorized] = useState(false);
+      const [dbStatus, setDbStatus] = useState('กำลังเชื่อมต่อฐานข้อมูล...');
+      const [summary, setSummary] = useState({ totalResponses: 0, latestAverage: '0.00', topTeam: ACTIVE_TEAM.name, teamScore: ACTIVE_TEAM.score });
+      const [socialFeed, setSocialFeed] = useState(DEFAULT_FEED);
 
-      const teamRank = useMemo(() => [...TEAMS].sort((a,b)=>b.score-a.score), []);
-      const avg = useMemo(() => (Object.values(ratings).reduce((a,b)=>a+b,0)/QUESTIONS.length).toFixed(2), [ratings]);
+      const teamRank = useMemo(() => [{ ...ACTIVE_TEAM, score: summary.teamScore || ACTIVE_TEAM.score }], [summary.teamScore]);
+      const avg = useMemo(() => (Object.values(ratings).reduce((a, b) => a + b, 0) / QUESTIONS.length).toFixed(2), [ratings]);
+
+      useEffect(() => {
+        const loadSummary = async () => {
+          try {
+            const data = await fetchSummaryFromDB();
+            setSummary({
+              totalResponses: Number(data.totalResponses || 0),
+              latestAverage: Number(data.latestAverage || 0).toFixed(2),
+              topTeam: data.topTeam || ACTIVE_TEAM.name,
+              teamScore: Number(data.teamScore || ACTIVE_TEAM.score),
+            });
+            if (Array.isArray(data.feed) && data.feed.length > 0) {
+              setSocialFeed(data.feed);
+            }
+            setDbStatus('เชื่อมต่อฐานข้อมูลออนไลน์สำเร็จ');
+          } catch (error) {
+            console.error(error);
+            setDbStatus('เชื่อมต่อฐานข้อมูลไม่ได้ กำลังใช้ข้อมูลสำรองชั่วคราว');
+          }
+        };
+        loadSummary();
+      }, []);
 
       const submitEvaluation = async () => {
-        if (!name || !role || !team) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+        if (!name || !role) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+
         setLoading(true);
-        const payload = { name, role, team, ratings, comment, average: avg, timestamp: new Date().toISOString() };
+        const payload = {
+          name,
+          role,
+          team: ACTIVE_TEAM.id,
+          ratings,
+          comment,
+          average: avg,
+          timestamp: new Date().toISOString(),
+          host: window.location.host,
+          online: true,
+        };
+
         try {
-          await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-        } catch (e) {
-          console.error(e);
+          await saveEvaluationToDB(payload);
+          setSummary((prev) => ({
+            ...prev,
+            totalResponses: prev.totalResponses + 1,
+            latestAverage: avg,
+          }));
+          setSubmitted(true);
+        } catch (error) {
+          console.error(error);
+          alert('ส่งข้อมูลไม่สำเร็จ โปรดลองอีกครั้ง');
         } finally {
           setLoading(false);
-          setSubmitted(true);
         }
       };
 
@@ -102,9 +161,9 @@
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md w-full">
             <i className="ph ph-check-circle text-6xl text-green-500"></i>
             <h1 className="text-2xl font-bold mt-3">ส่งแบบประเมินเรียบร้อย</h1>
-            <p className="text-slate-600 mt-2">ขอบคุณสำหรับความคิดเห็น คะแนนเฉลี่ยของคุณคือ <b>{avg}</b></p>
+            <p className="text-slate-600 mt-2">ขอบคุณสำหรับความคิดเห็นของทีม <b>{ACTIVE_TEAM.name}</b><br/>คะแนนเฉลี่ยของคุณคือ <b>{avg}</b></p>
           </div>
-        </div>
+        </div>;
       }
 
       return <div className="min-h-screen pb-10">
@@ -112,7 +171,8 @@
           <div className="max-w-5xl mx-auto flex justify-between items-center gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold">Narinukun Games 2026</h1>
-              <p className="opacity-90">Smart Evaluation Platform</p>
+              <p className="opacity-90">Smart Evaluation Platform (Blue Team Active)</p>
+              <p className="text-xs mt-1 opacity-90">{dbStatus}</p>
             </div>
             <button onClick={() => setShowDashboard(!showDashboard)} className="bg-white/15 px-4 py-2 rounded-xl border border-white/30">Dashboard</button>
           </div>
@@ -120,27 +180,26 @@
 
         <main className="max-w-5xl mx-auto px-4 grid md:grid-cols-3 gap-6">
           <section className="md:col-span-2 bg-white rounded-2xl p-5 shadow">
-            <h2 className="font-bold text-xl mb-4">แบบประเมินกิจกรรม</h2>
+            <h2 className="font-bold text-xl mb-4">แบบประเมินกิจกรรม (เปิดเฉพาะสีน้ำเงิน)</h2>
             <div className="grid md:grid-cols-2 gap-3">
-              <input className="border rounded-xl p-3" placeholder="ชื่อ-นามสกุล" value={name} onChange={e=>setName(e.target.value)} />
-              <select className="border rounded-xl p-3" value={role} onChange={e=>setRole(e.target.value)}>
-                <option value="">เลือกบทบาท</option>{ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+              <input className="border rounded-xl p-3" placeholder="ชื่อ-นามสกุล" value={name} onChange={e => setName(e.target.value)} />
+              <select className="border rounded-xl p-3" value={role} onChange={e => setRole(e.target.value)}>
+                <option value="">เลือกบทบาท</option>
+                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
-              <select className="border rounded-xl p-3 md:col-span-2" value={team} onChange={e=>setTeam(e.target.value)}>
-                <option value="">เลือกคณะสี</option>{TEAMS.map(t=><option key={t.id} value={t.name}>{t.name}</option>)}
-              </select>
+              <input className="border rounded-xl p-3 md:col-span-2 bg-slate-100" value={team} readOnly />
             </div>
 
             <div className="space-y-4 mt-5">
               {QUESTIONS.map(q => <div key={q.id} className="border rounded-xl p-4">
                 <div className="font-semibold">{q.id}. {q.title}</div>
                 <div className="text-sm text-slate-600 mb-2">{q.desc}</div>
-                <input type="range" min="1" max="5" value={ratings[q.id]} onChange={e=>setRatings({...ratings,[q.id]:Number(e.target.value)})} className="w-full" />
+                <input type="range" min="1" max="5" value={ratings[q.id]} onChange={e => setRatings({ ...ratings, [q.id]: Number(e.target.value) })} className="w-full" />
                 <div className="text-right text-sm text-slate-500">คะแนน: {ratings[q.id]}/5</div>
               </div>)}
             </div>
 
-            <textarea className="border rounded-xl p-3 w-full mt-4" rows="3" placeholder="ข้อเสนอแนะเพิ่มเติม" value={comment} onChange={e=>setComment(e.target.value)} />
+            <textarea className="border rounded-xl p-3 w-full mt-4" rows="3" placeholder="ข้อเสนอแนะเพิ่มเติม" value={comment} onChange={e => setComment(e.target.value)} />
             <button onClick={submitEvaluation} disabled={loading} className="mt-4 w-full bg-blue-600 text-white rounded-xl py-3 font-bold disabled:opacity-60">
               {loading ? 'กำลังส่ง...' : `ส่งแบบประเมิน (เฉลี่ย ${avg})`}
             </button>
@@ -148,12 +207,14 @@
 
           <aside className="space-y-6">
             <div className="bg-white rounded-2xl p-5 shadow">
-              <h3 className="font-bold mb-3">คะแนนรวมแต่ละสี</h3>
-              <div className="space-y-2">{teamRank.map((t,i)=><div key={t.id} className="flex justify-between items-center text-sm"><span className={t.text}>{i+1}. {t.name}</span><b>{t.score}</b></div>)}</div>
+              <h3 className="font-bold mb-3">สถานะทีมที่ Active</h3>
+              <div className="space-y-2">
+                {teamRank.map((t, i) => <div key={t.id} className="flex justify-between items-center text-sm"><span className={t.text}>{i + 1}. {t.name}</span><b>{t.score}</b></div>)}
+              </div>
             </div>
             <div className="bg-white rounded-2xl p-5 shadow">
               <h3 className="font-bold mb-3">Live Feed</h3>
-              <div className="space-y-2">{SOCIAL_FEED.map((p,idx)=><div key={idx} className={`rounded-lg p-2 text-sm ${p.color}`}><b>{p.user}</b>: {p.text}</div>)}</div>
+              <div className="space-y-2">{socialFeed.map((p, idx) => <div key={idx} className={`rounded-lg p-2 text-sm ${p.color || 'bg-slate-100 text-slate-700'}`}><b>{p.user}</b>: {p.text}</div>)}</div>
             </div>
           </aside>
         </main>
@@ -162,18 +223,19 @@
           <div className="bg-white rounded-2xl p-6 max-w-md w-full">
             {!authorized ? <>
               <h3 className="font-bold text-lg">เข้าสู่ Dashboard</h3>
-              <input type="password" className="border rounded-xl p-3 w-full mt-3" value={passInput} onChange={e=>setPassInput(e.target.value)} placeholder="รหัสผ่านผู้ดูแล" />
+              <input type="password" className="border rounded-xl p-3 w-full mt-3" value={passInput} onChange={e => setPassInput(e.target.value)} placeholder="รหัสผ่านผู้ดูแล" />
               <button className="mt-3 bg-slate-900 text-white rounded-xl px-4 py-2 w-full" onClick={openDashboard}>ยืนยัน</button>
             </> : <>
               <h3 className="font-bold text-lg mb-3">Dashboard สรุป</h3>
-              <p>ผู้ประเมินปัจจุบัน: <b>Live Demo</b></p>
-              <p>คะแนนเฉลี่ยล่าสุด: <b>{avg}</b></p>
-              <p>ทีมคะแนนสูงสุด: <b>{teamRank[0].name}</b></p>
+              <p>สถานะฐานข้อมูล: <b>{dbStatus}</b></p>
+              <p>จำนวนผู้ประเมินทั้งหมด: <b>{summary.totalResponses}</b></p>
+              <p>คะแนนเฉลี่ยล่าสุด: <b>{summary.latestAverage}</b></p>
+              <p>ทีมที่ Active: <b>{summary.topTeam}</b></p>
             </>}
-            <button className="mt-4 text-slate-500 text-sm" onClick={()=>setShowDashboard(false)}>ปิด</button>
+            <button className="mt-4 text-slate-500 text-sm" onClick={() => setShowDashboard(false)}>ปิด</button>
           </div>
         </div>}
-      </div>
+      </div>;
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
